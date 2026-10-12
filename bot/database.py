@@ -17,13 +17,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-raw_url = os.environ.get("DATABASE_URL", "").strip()
+DEFAULT_DATABASE_URL = (
+    "postgresql+asyncpg://bothost_db_f59f797f560c:VyyeoE9q_CTIt7VwqYRV6YqUXJggDmBG1dTT9EhKgHc@node1.pghost.ru:16204/bothost_db_f59f797f560c"
+)
 
-# Приводим к формату asyncpg для асинхронного драйвера PostgreSQL
+raw_url = os.environ.get("DATABASE_URL", "").strip() or DEFAULT_DATABASE_URL
+
+# Принудительно используем драйвер asyncpg для асинхронного PostgreSQL
 if raw_url.startswith("postgresql://"):
     DATABASE_URL = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 elif raw_url.startswith("postgres://"):
     DATABASE_URL = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif raw_url.startswith("postgresql+psycopg://"):
+    DATABASE_URL = raw_url.replace("postgresql+psycopg://", "postgresql+asyncpg://", 1)
 else:
     DATABASE_URL = raw_url
 
