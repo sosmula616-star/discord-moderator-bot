@@ -21,58 +21,41 @@ async def index(request: Request):
     if "user_id" in request.session:
         return RedirectResponse(url="/dashboard")
     templates = get_templates(request)
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="login.html")
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, user=Depends(require_auth)):
     templates = get_templates(request)
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "user": user,
-    })
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={"user": user})
 
 
 @router.get("/buttons", response_class=HTMLResponse)
 async def buttons_page(request: Request, user=Depends(require_auth)):
     templates = get_templates(request)
-    return templates.TemplateResponse("buttons.html", {
-        "request": request,
-        "user": user,
-    })
+    return templates.TemplateResponse(request=request, name="buttons.html", context={"user": user})
 
 
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, user=Depends(require_auth)):
     templates = get_templates(request)
-    return templates.TemplateResponse("settings.html", {
-        "request": request,
-        "user": user,
-    })
+    return templates.TemplateResponse(request=request, name="settings.html", context={"user": user})
 
 
 @router.get("/reports", response_class=HTMLResponse)
 async def reports_page(request: Request, user=Depends(require_auth)):
     templates = get_templates(request)
-    return templates.TemplateResponse("reports.html", {
-        "request": request,
-        "user": user,
-    })
+    return templates.TemplateResponse(request=request, name="reports.html", context={"user": user})
 
 
 @router.get("/punishments", response_class=HTMLResponse)
 async def punishments_page(request: Request, user=Depends(require_auth)):
     templates = get_templates(request)
-    return templates.TemplateResponse("punishments.html", {
-        "request": request,
-        "user": user,
-    })
+    return templates.TemplateResponse(request=request, name="punishments.html", context={"user": user})
 
 
 @router.get("/audit", response_class=HTMLResponse)
 async def audit_page(request: Request, user=Depends(require_auth)):
     templates = get_templates(request)
-    return templates.TemplateResponse("audit.html", {
-        "request": request,
-        "user": user,
-    })
+    return templates.TemplateResponse(request=request, name="audit.html", context={"user": user})
+
