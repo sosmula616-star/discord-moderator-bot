@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Установка системных зависимостей для сборки psycopg2
+# Установка системных зависимостей для сборки
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
@@ -16,3 +16,5 @@ COPY . .
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+
+CMD ["python", "run.py"]

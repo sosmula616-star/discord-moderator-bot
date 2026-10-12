@@ -61,12 +61,15 @@ async def main():
 
     log.info(f"Подключение к БД: {DATABASE_URL}")
 
-    # 1. Инициализация базы данных
+    # 1. Инициализация базы данных (с таймаутом, чтобы не зависать при медленной сети)
     try:
-        await init_db()
+        log.info("⏳ Проверка подключения к базе данных...")
+        await asyncio.wait_for(init_db(), timeout=15.0)
         log.info("✅ База данных успешно инициализирована")
+    except asyncio.TimeoutError:
+        log.warning("⚠️ Таймаут подключения к БД (15 сек). Продолжаем запуск бота...")
     except Exception as e:
-        log.error(f"Ошибка инициализации БД: {e}", exc_info=True)
+        log.error(f"⚠️ Ошибка инициализации БД ({e}). Продолжаем запуск...", exc_info=True)
 
     # 2. Настройка порта и хоста веб-панели (поддержка Bothost PORT)
     host = os.environ.get("WEB_HOST", "0.0.0.0")
