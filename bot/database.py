@@ -100,7 +100,24 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Создаёт таблицы в базе данных (если ещё не созданы)."""
+    """Создаёт таблицы в базе данных (если ещё не созданы) и импортирует схему Root."""
     from bot.models import Base
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        if is_sqlite:
+            schema_file = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "../data/shared_schema.sql")
+            )
+            if os.path.exists(schema_file):
+                with open(schema_file, "r", encoding="utf-8") as f:
+                    sql_script = f.read()
+
+                def apply_sql(dbapi_conn):
+                    cursor = dbapi_conn.cursor()
+                    try:
+                        cursor.executescript(sql_script)
+                    finally:
+                        cursor.close()
+
+                await conn.run_sync(apply_sql)
