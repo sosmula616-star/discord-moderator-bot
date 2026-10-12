@@ -47,7 +47,11 @@ class ModerationBot(commands.Bot):
             intents=INTENTS,
             help_command=None,
         )
-        self.guild_id = int(os.environ["GUILD_ID"])
+        self.guild_id = int(os.environ.get("GUILD_ID", 1558606862277017690))
+
+    async def on_ready(self):
+        log.info(f"✅ Discord-бот успешно запущен как {self.user} (ID: {self.user.id})")
+        log.info(f"Бот присутствует на {len(self.guilds)} серверах")
 
     async def setup_hook(self):
         # Загружаем коги
@@ -59,10 +63,13 @@ class ModerationBot(commands.Bot):
                 log.error(f"Ошибка загрузки cog {cog}: {e}", exc_info=True)
 
         # Синхронизируем slash-команды
-        guild_obj = discord.Object(id=self.guild_id)
-        self.tree.copy_global_to(guild=guild_obj)
-        await self.tree.sync(guild=guild_obj)
-        log.info(f"Slash-команды синхронизированы для guild {self.guild_id}")
+        try:
+            guild_obj = discord.Object(id=self.guild_id)
+            self.tree.copy_global_to(guild=guild_obj)
+            await self.tree.sync(guild=guild_obj)
+            log.info(f"Slash-команды синхронизированы для guild {self.guild_id}")
+        except Exception as e:
+            log.warning(f"Не удалось сразу синхронизировать команды: {e}")
 
     async def close(self):
         await config_cache.close()
