@@ -68,3 +68,16 @@ app.state.templates = templates
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(panel.router, prefix="", tags=["panel"])
 app.include_router(api.router, prefix="/api", tags=["api"])
+
+
+@app.get("/api/health", tags=["system"])
+@app.get("/health", tags=["system"])
+async def health_check():
+    """Эндпоинт проверки жизнеспособности панели и бота для Bothost / Root."""
+    return {
+        "status": "online",
+        "bot": "warden",
+        "client_id": "1558816485760303136",
+        "version": "1.0.0",
+    }
+

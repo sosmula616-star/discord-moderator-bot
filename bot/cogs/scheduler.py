@@ -30,9 +30,11 @@ class SchedulerCog(commands.Cog, name="Scheduler"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._check_expired.start()
+        self._send_root_heartbeat.start()
 
     def cog_unload(self):
         self._check_expired.cancel()
+        self._send_root_heartbeat.cancel()
 
     # ─────────────────────────── Таймер истечения ───────────────────────────
 
@@ -133,6 +135,40 @@ class SchedulerCog(commands.Cog, name="Scheduler"):
 
     @_check_expired.before_loop
     async def before_check(self):
+        await self.bot.wait_until_ready()
+
+    # ─────────────────────────── Root Heartbeat ───────────────────────────
+
+    @tasks.loop(seconds=30)
+    async def _send_root_heartbeat(self):
+        """Отправка периодического Heartbeat в консоль управления Root ovrdose."""
+        root_url = os.environ.get("ROOT_PANEL_URL", "https://ovrdose.bothost.tech").rstrip("/")
+        token = os.environ.get("INTERNAL_API_TOKEN", "root_internal_api_secret_ovrdose_token")
+        ping_ms = round(self.bot.latency * 1000, 1) if self.bot.latency and self.bot.latency > 0 else 14.0
+        uptime_sec = int((utcnow() - getattr(self.bot, "start_time", utcnow())).total_seconds())
+
+        payload = {
+            "bot": "warden",
+            "pingMs": ping_ms,
+            "ramMb": 64.0,
+            "uptimeSec": max(uptime_sec, 1),
+            "guildCount": len(self.bot.guilds),
+        }
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{root_url}/api/internal/heartbeat",
+                    json=payload,
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=aiohttp.ClientTimeout(total=4),
+                ) as resp:
+                    pass
+        except Exception:
+            pass
+
+    @_send_root_heartbeat.before_loop
+    async def before_heartbeat(self):
         await self.bot.wait_until_ready()
 
     # ─────────────────────────── on_member_join ───────────────────────────

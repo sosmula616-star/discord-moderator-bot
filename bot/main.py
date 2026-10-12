@@ -40,6 +40,9 @@ COGS = [
 ]
 
 
+from bot.utils.helpers import utcnow
+
+
 class ModerationBot(commands.Bot):
     def __init__(self):
         super().__init__(
@@ -48,6 +51,8 @@ class ModerationBot(commands.Bot):
             help_command=None,
         )
         self.guild_id = int(os.environ.get("GUILD_ID", 1558606862277017690))
+        self.start_time = utcnow()
+
 
     async def on_ready(self):
         log.info(f"✅ Discord-бот успешно запущен как {self.user} (ID: {self.user.id})")
