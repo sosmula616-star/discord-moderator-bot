@@ -54,6 +54,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = (
+        "frame-ancestors 'self' https://ovrdose.bothost.tech https://*.bothost.tech http://localhost:* http://127.0.0.1:*"
+    )
+    if "x-frame-options" in response.headers:
+        del response.headers["x-frame-options"]
+    return response
+
+
 # ─────────────────────────── Static & Templates ───────────────────────────
 
 BASE_DIR = os.path.dirname(__file__)
