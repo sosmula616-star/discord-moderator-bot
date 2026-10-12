@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mod Panel — Наказания</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  {% include "partials/sidebar.html" %}
+  <div class="main-content">
+    <header class="top-header">
+      <h1 class="page-title">🔨 Наказания</h1>
+      <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="loadPunishments()">🔄 Обновить</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <!-- Фильтры -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <input type="number" id="filter-user-id" class="form-input" placeholder="Фильтр по ID пользователя...">
+          </div>
+          <div style="width:180px">
+            <select id="filter-type" class="form-select">
+              <option value="">Все типы</option>
+              <option value="ban_role">Бан (роль)</option>
+              <option value="mute_voice">Мут голос</option>
+              <option value="mute_text">Мут текст</option>
+              <option value="warn">Варн (1/3, 2/3)</option>
+              <option value="warning">Предупреждение</option>
+            </select>
+          </div>
+          <div style="width:160px">
+            <select id="filter-active" class="form-select">
+              <option value="">Все статусы</option>
+              <option value="true">Только активные</option>
+              <option value="false">Истёкшие / снятые</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="applyFilters()">Применить</button>
+          <button class="btn btn-secondary" onclick="resetFilters()">Сбросить</button>
+        </div>
+      </div>
+
+      <!-- Таблица -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Список нарушений</span>
+          <span id="total-count" style="font-size:13px;color:var(--text-secondary)"></span>
+        </div>
+        <div id="table-container" style="overflow-x:auto;">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+        <div id="pagination" class="pagination" style="margin-top:16px;display:flex;justify-content:center;gap:6px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/utils.js"></script>
+<script>
+let currentPage = 1;
+
+async function loadPunishments(page = 1) {
+  currentPage = page;
+  const container = document.getElementById('table-container');
+  container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+
+  const userId = document.getElementById('filter-user-id').value.trim();
+  const typeFilter = document.getElementById('filter-type').value;
+  const activeFilter = document.getElementById('filter-active').value;
+
+  let query = `?page=${page}&per_page=15`;
+  if (userId) query += `&user_id=${userId}`;
+  if (typeFilter) query += `&type_filter=${typeFilter}`;
+  if (activeFilter) query += `&active=${activeFilter}`;
+
+  try {
+    const data = await api.get(`/punishments${query}`);
+    document.getElementById('total-count').textContent = `Всего: ${data.total}`;
+
+    if (!data.items.length) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🕊️</div><div class="empty-state-text">Наказания не найдены</div></div>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Тип</th>
+            <th>Нарушитель</th>
+            <th>Модератор</th>
+            <th>Причина</th>
+            <th>Дата выдачи</th>
+            <th>Истекает</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.items.map(p => `
+            <tr>
+              <td>#${p.id}</td>
+              <td><span class="badge badge-${p.type.includes('ban') ? 'ban' : (p.type.includes('mute') ? 'mute' : 'warn')}">${punishmentLabels[p.type] || p.type}</span></td>
+              <td>
+                <span style="font-family:monospace;font-size:13px">${p.user_id}</span>
+                <button class="btn btn-secondary btn-sm" style="padding:2px 6px;margin-left:4px" onclick="filterByUser(${p.user_id})">🔍</button>
+              </td>
+              <td style="font-family:monospace;font-size:12px;color:var(--text-secondary)">${p.moderator_id}</td>
+              <td style="max-width:240px;word-break:break-word;">
+                <b>${escapeHtml(p.reason)}</b>
+                ${p.description ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${escapeHtml(p.description)}</div>` : ''}
+                ${p.auto ? `<span class="badge" style="background:var(--accent-glow);color:var(--accent-light);font-size:10px;margin-top:2px;">Авто</span>` : ''}
+              </td>
+              <td style="font-size:12px;color:var(--text-secondary)">${formatDate(p.created_at)}</td>
+              <td style="font-size:12px;color:var(--text-secondary)">${p.expires_at ? formatDate(p.expires_at) : 'Бессрочно'}</td>
+              <td>
+                ${p.active 
+                  ? '<span class="badge" style="background:rgba(59,165,92,0.2);color:#3ba55c">🟢 Активно</span>'
+                  : (p.revoked_by 
+                      ? `<span class="badge" style="background:rgba(237,66,69,0.15);color:#ed4245" title="Снял: ${p.revoked_by}">🔴 Снято</span>` 
+                      : '<span class="badge" style="background:rgba(150,152,157,0.2);color:var(--text-secondary)">⚪ Истекло</span>')}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    renderPagination(document.getElementById('pagination'), data.page, data.total, data.per_page, loadPunishments);
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">${err.message}</div></div>`;
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function filterByUser(id) {
+  document.getElementById('filter-user-id').value = id;
+  loadPunishments(1);
+}
+
+function applyFilters() {
+  loadPunishments(1);
+}
+
+function resetFilters() {
+  document.getElementById('filter-user-id').value = '';
+  document.getElementById('filter-type').value = '';
+  document.getElementById('filter-active').value = '';
+  loadPunishments(1);
+}
+
+loadPunishments(1);
+</script>
+</body>
+</html>

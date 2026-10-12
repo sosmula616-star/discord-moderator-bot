@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mod Panel — Журнал аудита</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  {% include "partials/sidebar.html" %}
+  <div class="main-content">
+    <header class="top-header">
+      <h1 class="page-title">📜 Журнал аудита</h1>
+      <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="loadAudit()">🔄 Обновить</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <!-- Фильтры -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <input type="number" id="filter-actor" class="form-input" placeholder="ID инициатора (модератора)...">
+          </div>
+          <div style="flex:1;min-width:180px">
+            <input type="number" id="filter-target" class="form-input" placeholder="ID цели (пользователя)...">
+          </div>
+          <button class="btn btn-primary" onclick="loadAudit(1)">Фильтровать</button>
+          <button class="btn btn-secondary" onclick="resetFilters()">Сбросить</button>
+        </div>
+      </div>
+
+      <!-- Таблица -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">История действий</span>
+          <span id="total-count" style="font-size:13px;color:var(--text-secondary)"></span>
+        </div>
+        <div id="table-container" style="overflow-x:auto;">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+        <div id="pagination" class="pagination" style="margin-top:16px;display:flex;justify-content:center;gap:6px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/utils.js"></script>
+<script>
+let currentPage = 1;
+
+async function loadAudit(page = 1) {
+  currentPage = page;
+  const container = document.getElementById('table-container');
+  container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+
+  const actor = document.getElementById('filter-actor').value.trim();
+  const target = document.getElementById('filter-target').value.trim();
+
+  let query = `?page=${page}&per_page=25`;
+  if (actor) query += `&actor_id=${actor}`;
+  if (target) query += `&target_id=${target}`;
+
+  try {
+    const data = await api.get(`/audit${query}`);
+    document.getElementById('total-count').textContent = `Всего: ${data.total}`;
+
+    if (!data.items.length) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📜</div><div class="empty-state-text">Записей нет</div></div>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Время</th>
+            <th>Действие</th>
+            <th>Инициатор</th>
+            <th>Цель</th>
+            <th>Связь</th>
+            <th>Детали</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.items.map(l => `
+            <tr>
+              <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap">${formatDate(l.created_at)}</td>
+              <td><span class="badge" style="background:var(--bg-input);font-family:monospace">${escapeHtml(l.action)}</span></td>
+              <td style="font-family:monospace;font-size:12px">${l.actor_id || 'Система'}</td>
+              <td style="font-family:monospace;font-size:12px">${l.target_id || '—'}</td>
+              <td style="font-size:12px">
+                ${l.punishment_id ? `<span style="color:var(--danger)">Наказание #${l.punishment_id}</span>` : ''}
+                ${l.report_id ? `<span style="color:var(--info)">Репорт #${l.report_id}</span>` : ''}
+                ${!l.punishment_id && !l.report_id ? '—' : ''}
+              </td>
+              <td style="max-width:300px;word-break:break-word;font-size:12px;color:var(--text-secondary)">
+                ${l.details ? escapeHtml(l.details) : '—'}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    renderPagination(document.getElementById('pagination'), data.page, data.total, data.per_page, loadAudit);
+  } catch(err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">${err.message}</div></div>`;
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function resetFilters() {
+  document.getElementById('filter-actor').value = '';
+  document.getElementById('filter-target').value = '';
+  loadAudit(1);
+}
+
+loadAudit(1);
+</script>
+</body>
+</html>

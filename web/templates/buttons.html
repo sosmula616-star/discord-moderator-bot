@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mod Panel — Кнопки /act</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  {% include "partials/sidebar.html" %}
+  <div class="main-content">
+    <header class="top-header">
+      <h1 class="page-title">🎛️ Настройка кнопок команды /act</h1>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="saveButtons()">💾 Сохранить изменения</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="card" style="margin-bottom: 20px;">
+        <p style="font-size:14px;color:var(--text-secondary);line-height:1.6">
+          Здесь настраивается интерактивное меню кнопок в Discord для команды <code>/act @пользователь</code>. 
+          Вы можете настроить текст кнопки, эмодзи, цвет стиля и список Discord Role ID, которым разрешено нажимать эту кнопку.
+          При сохранении настройки мгновенно отправляются в бот через PostgreSQL LISTEN/NOTIFY.
+        </p>
+      </div>
+
+      <div id="buttons-container">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+
+      <div style="margin-top:24px;text-align:right">
+        <button class="btn btn-primary" onclick="saveButtons()">💾 Сохранить изменения</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/utils.js"></script>
+<script>
+let buttonsData = [];
+
+async function loadButtons() {
+  const container = document.getElementById('buttons-container');
+  container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    buttonsData = await api.get('/buttons');
+    renderButtons();
+  } catch(err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">${err.message}</div></div>`;
+  }
+}
+
+function renderButtons() {
+  const container = document.getElementById('buttons-container');
+  if (!buttonsData.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-text">Кнопки не настроены</div></div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      ${buttonsData.map((btn, idx) => `
+        <div class="card" style="border-left: 4px solid ${getStyleColor(btn.style)};">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:24px">${btn.emoji || '🔘'}</span>
+              <div>
+                <b style="font-size:16px">${escapeHtml(btn.label)}</b>
+                <div style="font-size:12px;color:var(--text-muted);font-family:monospace">Ключ действия: ${btn.action_key}</div>
+              </div>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+              <input type="checkbox" onchange="updateBtnProp(${idx}, 'enabled', this.checked)" ${btn.enabled ? 'checked' : ''}>
+              Активна
+            </label>
+          </div>
+
+          <div class="grid grid-4" style="gap:12px">
+            <div>
+              <label class="form-label" style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Название</label>
+              <input type="text" class="form-input" value="${escapeHtml(btn.label)}" onchange="updateBtnProp(${idx}, 'label', this.value)">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Эмодзи</label>
+              <input type="text" class="form-input" value="${escapeHtml(btn.emoji || '')}" placeholder="напр. 🔨" onchange="updateBtnProp(${idx}, 'emoji', this.value)">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Стиль (цвет)</label>
+              <select class="form-select" onchange="updateBtnProp(${idx}, 'style', this.value)">
+                <option value="primary" ${btn.style === 'primary' ? 'selected' : ''}>Синий (Primary)</option>
+                <option value="secondary" ${btn.style === 'secondary' ? 'selected' : ''}>Серый (Secondary)</option>
+                <option value="success" ${btn.style === 'success' ? 'selected' : ''}>Зелёный (Success)</option>
+                <option value="danger" ${btn.style === 'danger' ? 'selected' : ''}>Красный (Danger)</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Порядок отображения</label>
+              <input type="number" class="form-input" value="${btn.order}" onchange="updateBtnProp(${idx}, 'order', parseInt(this.value) || 0)">
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <label class="form-label" style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">
+              Разрешённые Role ID (через запятую, оставьте пустым для доступа всем модераторам):
+            </label>
+            <input type="text" class="form-input" value="${btn.role_ids.join(', ')}" 
+                   placeholder="123456789012345678, 234567890123456789"
+                   onchange="updateRoleIds(${idx}, this.value)">
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function getStyleColor(style) {
+  switch(style) {
+    case 'primary': return 'var(--accent)';
+    case 'success': return 'var(--success)';
+    case 'danger': return 'var(--danger)';
+    default: return 'var(--border)';
+  }
+}
+
+function updateBtnProp(idx, prop, value) {
+  buttonsData[idx][prop] = value;
+}
+
+function updateRoleIds(idx, str) {
+  const ids = str.split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && !isNaN(s))
+    .map(s => parseInt(s));
+  buttonsData[idx].role_ids = ids;
+}
+
+async function saveButtons() {
+  try {
+    const payload = buttonsData.map(b => ({
+      action_key: b.action_key,
+      label: b.label,
+      emoji: b.emoji || null,
+      style: b.style,
+      order: b.order,
+      enabled: b.enabled,
+      role_ids: b.role_ids || [],
+    }));
+    const res = await api.put('/buttons', payload);
+    showToast(res.message || 'Кнопки успешно сохранены', 'success');
+  } catch(err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+loadButtons();
+</script>
+</body>
+</html>

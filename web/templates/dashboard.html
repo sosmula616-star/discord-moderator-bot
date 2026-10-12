@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mod Panel — Дашборд</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  {% include "partials/sidebar.html" %}
+  <div class="main-content">
+    <header class="top-header">
+      <button id="menu-toggle" class="btn btn-secondary btn-icon" style="display:none">☰</button>
+      <h1 class="page-title">📊 Дашборд</h1>
+      <div class="header-actions">
+        <span id="last-update" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
+    </header>
+    <div class="page-body">
+      <!-- Stats row -->
+      <div class="grid grid-4" style="margin-bottom:24px" id="stats-grid">
+        <div class="stat-card accent">
+          <div class="stat-icon">🔨</div>
+          <div class="stat-value" id="stat-bans">—</div>
+          <div class="stat-label">Активных банов</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon">🔇</div>
+          <div class="stat-value" id="stat-mutes">—</div>
+          <div class="stat-label">Активных мутов</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-value" id="stat-warns">—</div>
+          <div class="stat-label">Активных варнов</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">📋</div>
+          <div class="stat-value" id="stat-reports">—</div>
+          <div class="stat-label">Открытых репортов</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <!-- Recent punishments -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔨 Последние наказания</span>
+            <a href="/punishments" class="btn btn-secondary btn-sm">Все →</a>
+          </div>
+          <div id="recent-punishments"><div class="loading-overlay"><div class="spinner"></div></div></div>
+        </div>
+        <!-- Recent reports -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📋 Последние репорты</span>
+            <a href="/reports" class="btn btn-secondary btn-sm">Все →</a>
+          </div>
+          <div id="recent-reports"><div class="loading-overlay"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+
+      <!-- User lookup -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-header">
+          <span class="card-title">🔍 Поиск пользователя</span>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:16px">
+          <input type="number" id="search-user-id" class="form-input" placeholder="Discord ID пользователя" style="max-width:300px">
+          <button class="btn btn-primary" onclick="searchUser()">Найти</button>
+        </div>
+        <div id="user-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/utils.js"></script>
+<script>
+async function loadStats() {
+  try {
+    const [pResult, rResult] = await Promise.all([
+      api.get('/punishments?active=true&per_page=1'),
+      api.get('/reports?status_filter=open&per_page=1'),
+    ]);
+
+    // Count by type
+    const banData   = await api.get('/punishments?active=true&type_filter=ban_role&per_page=1');
+    const muteData  = await api.get('/punishments?active=true&type_filter=mute_voice&per_page=1');
+    const mute2Data = await api.get('/punishments?active=true&type_filter=mute_text&per_page=1');
+    const warnData  = await api.get('/punishments?active=true&type_filter=warn&per_page=1');
+
+    document.getElementById('stat-bans').textContent   = banData.total;
+    document.getElementById('stat-mutes').textContent  = muteData.total + mute2Data.total;
+    document.getElementById('stat-warns').textContent  = warnData.total;
+    document.getElementById('stat-reports').textContent = rResult.total;
+
+    document.getElementById('last-update').textContent = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+async function loadRecentPunishments() {
+  const el = document.getElementById('recent-punishments');
+  try {
+    const data = await api.get('/punishments?per_page=5');
+    if (!data.items.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">Нет наказаний</div></div>';
+      return;
+    }
+    el.innerHTML = `<table><thead><tr><th>Тип</th><th>Пользователь</th><th>Причина</th><th>Дата</th></tr></thead><tbody>
+      ${data.items.map(p => `<tr>
+        <td><span class="badge badge-${p.type.includes('ban') ? 'ban' : 'mute'}">${punishmentLabels[p.type] || p.type}</span></td>
+        <td style="font-family:monospace;font-size:12px">${p.user_id}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.reason}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${formatDate(p.created_at)}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-text">Ошибка загрузки</div></div>';
+  }
+}
+
+async function loadRecentReports() {
+  const el = document.getElementById('recent-reports');
+  try {
+    const data = await api.get('/reports?per_page=5');
+    if (!data.items.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">Нет репортов</div></div>';
+      return;
+    }
+    el.innerHTML = `<table><thead><tr><th>#</th><th>Ответчик</th><th>Статус</th><th>Дата</th></tr></thead><tbody>
+      ${data.items.map(r => `<tr>
+        <td><b>#${r.id}</b></td>
+        <td style="font-family:monospace;font-size:12px">${r.defendant_id}</td>
+        <td><span class="badge badge-${r.status}">${reportStatusLabels[r.status] || r.status}</span></td>
+        <td style="font-size:12px;color:var(--text-secondary)">${formatDate(r.created_at)}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-text">Ошибка загрузки</div></div>';
+  }
+}
+
+async function searchUser() {
+  const userId = document.getElementById('search-user-id').value.trim();
+  if (!userId) return;
+  const el = document.getElementById('user-result');
+  setLoading(el);
+  try {
+    const data = await api.get(`/user/${userId}`);
+    const u = data.user;
+    el.innerHTML = `
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px">
+          ${u.avatar_url ? `<img src="${u.avatar_url}" style="width:60px;height:60px;border-radius:50%;border:2px solid var(--border)">` : '<div style="width:60px;height:60px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:28px">👤</div>'}
+          <div>
+            <div style="font-size:18px;font-weight:700">${u.display_name || u.username || u.id}</div>
+            <div style="font-size:12px;color:var(--text-secondary)">ID: ${u.id}</div>
+            <div style="font-size:12px;color:var(--text-secondary)">
+              ${u.gender === 'male' ? '♂ Мужской' : u.gender === 'female' ? '♀ Женский' : '— Пол'}
+              · ${u.access_status === 'access' ? '✅ Допуск' : u.access_status === 'noaccess' ? '🚫 Недопуск' : '— Допуск'}
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">Наказания (${data.punishments.length})</div>
+          ${data.punishments.slice(0,3).map(p => `
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
+              <span class="badge badge-${p.active ? 'active' : 'expired'}">${p.active ? '🟢' : '🔴'}</span>
+              <span style="font-size:13px">${punishmentLabels[p.type]}</span>
+              <span style="font-size:11px;color:var(--text-muted)">${formatDate(p.created_at)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">Жалобы (${data.reports.length})</div>
+          ${data.reports.slice(0,3).map(r => `
+            <div style="font-size:13px;margin-bottom:4px">
+              <b>#${r.id}</b> <span class="badge badge-${r.status}">${reportStatusLabels[r.status]}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-text">${e.message}</div></div>`;
+  }
+}
+
+// Инициализация
+loadStats();
+loadRecentPunishments();
+loadRecentReports();
+setInterval(loadStats, 30000);
+</script>
+</body>
+</html>

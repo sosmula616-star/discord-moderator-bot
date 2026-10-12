@@ -1,0 +1,77 @@
+<aside class="sidebar" id="sidebar">
+  <a href="/dashboard" class="sidebar-brand">
+    <div class="sidebar-brand-icon">🛡️</div>
+    <div class="sidebar-brand-text">
+      <div class="sidebar-brand-name">Mod Panel</div>
+      <div class="sidebar-brand-sub">Discord Moderator</div>
+    </div>
+  </a>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section-label">Главная</div>
+    <a href="/dashboard" class="nav-item" data-path="/dashboard">
+      <span class="nav-icon">📊</span>
+      <span class="nav-text">Дашборд</span>
+    </a>
+
+    <div class="sidebar-section-label">Модерация</div>
+    <a href="/punishments" class="nav-item" data-path="/punishments">
+      <span class="nav-icon">🔨</span>
+      <span class="nav-text">Наказания</span>
+    </a>
+    <a href="/reports" class="nav-item" data-path="/reports">
+      <span class="nav-icon">📋</span>
+      <span class="nav-text">Жалобы</span>
+    </a>
+
+    <div class="sidebar-section-label">Конфигурация</div>
+    <a href="/buttons" class="nav-item" data-path="/buttons">
+      <span class="nav-icon">🎛️</span>
+      <span class="nav-text">Кнопки /act</span>
+    </a>
+    <a href="/settings" class="nav-item" data-path="/settings">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-text">Настройки сервера</span>
+    </a>
+    <a href="/audit" class="nav-item" data-path="/audit">
+      <span class="nav-icon">📜</span>
+      <span class="nav-text">Журнал аудита</span>
+    </a>
+
+    <div class="sidebar-section-label">Экосистема</div>
+    <a href="http://localhost:3000" class="nav-item" target="_blank" title="Перейти в Root Management Console">
+      <span class="nav-icon">🏛️</span>
+      <span class="nav-text">Root Console ↗</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-card" onclick="window.location.href='/auth/logout'" title="Нажмите, чтобы выйти">
+      <div class="user-avatar">
+        {% if user and user.avatar %}
+          <img src="https://cdn.discordapp.com/avatars/{{ user.user_id }}/{{ user.avatar }}.png?size=64" alt="avatar" />
+        {% else %}
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--accent);color:white;font-weight:700;">
+            {{ (user.username[0] if user and user.username else 'U') | upper }}
+          </div>
+        {% endif %}
+      </div>
+      <div class="user-info">
+        <div class="user-name">{{ user.username if user else 'Модератор' }}</div>
+        <div style="font-size:11px;color:var(--text-muted)">{{ 'Администратор' if user and user.is_admin else 'Модератор' }} • Выйти</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<script>
+  // Highlight active link
+  (function() {
+    const current = window.location.pathname;
+    document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+      if (item.getAttribute('data-path') === current) {
+        item.classList.add('active');
+      }
+    });
+  })();
+</script>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mod Panel — Настройки сервера</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  {% include "partials/sidebar.html" %}
+  <div class="main-content">
+    <header class="top-header">
+      <h1 class="page-title">⚙️ Настройки сервера</h1>
+      <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="syncBanPerms()">🔄 Синхронизировать права бан-роли</button>
+        <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить настройки</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <!-- Роли верификации и наказаний -->
+      <div class="grid grid-2" style="gap:20px;margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🎭 Роли верификации и пола</span>
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Роль «Допуск» (Role ID)</label>
+            <input type="number" id="role_access_id" class="form-input" placeholder="ID роли допуска">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Роль «Недопуск» (Role ID)</label>
+            <input type="number" id="role_noaccess_id" class="form-input" placeholder="ID роли недопуска">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Роль «♂ Мужской» (Role ID)</label>
+            <input type="number" id="role_male_id" class="form-input" placeholder="ID мужской роли">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Роль «♀ Женский» (Role ID)</label>
+            <input type="number" id="role_female_id" class="form-input" placeholder="ID женской роли">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔨 Роли наказаний</span>
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Роль «Бан» (Role ID)</label>
+            <input type="number" id="role_ban_id" class="form-input" placeholder="ID бан роли">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Роль «Мут голос» (Role ID)</label>
+            <input type="number" id="role_mute_voice_id" class="form-input" placeholder="ID роли мута голоса">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Роль «Мут текст» (Role ID)</label>
+            <input type="number" id="role_mute_text_id" class="form-input" placeholder="ID роли мута текста">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Роль «Варн 1/3» (Role ID)</label>
+            <input type="number" id="role_warn1_id" class="form-input" placeholder="ID роли первого варна">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Роль «Варн 2/3» (Role ID)</label>
+            <input type="number" id="role_warn2_id" class="form-input" placeholder="ID роли второго варна">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Роль «Предупреждение» (Role ID)</label>
+            <input type="number" id="role_warning_id" class="form-input" placeholder="ID роли предупреждения">
+          </div>
+        </div>
+      </div>
+
+      <!-- Каналы и категории -->
+      <div class="grid grid-2" style="gap:20px;margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📁 Каналы и Категории</span>
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Канал «Бан-комната» (Channel ID)</label>
+            <input type="number" id="channel_ban_room_id" class="form-input" placeholder="ID текстового канала для забаненных">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Канал «Жалобы» (Channel ID)</label>
+            <input type="number" id="channel_reports_id" class="form-input" placeholder="ID канала с кнопкой подачи жалобы">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Категория для тикетов жалоб (Category ID)</label>
+            <input type="number" id="category_reports_id" class="form-input" placeholder="ID категории для приватных голосовых комнат">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📜 Каналы логирования</span>
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Лог репортов (Channel ID)</label>
+            <input type="number" id="channel_log_reports_id" class="form-input" placeholder="ID канала логирования жалоб">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Лог наказаний (Channel ID)</label>
+            <input type="number" id="channel_log_punish_id" class="form-input" placeholder="ID канала логирования наказаний">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Лог верификации (Channel ID)</label>
+            <input type="number" id="channel_log_verify_id" class="form-input" placeholder="ID канала логирования верификации">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Лог веб-панели (Channel ID)</label>
+            <input type="number" id="channel_log_panel_id" class="form-input" placeholder="ID канала логирования действий веб-панели">
+          </div>
+        </div>
+      </div>
+
+      <!-- Лимиты и правила -->
+      <div class="grid grid-2" style="gap:20px;margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">⏱️ Лимиты и автоматизация</span>
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Максимальное время мута (в минутах)</label>
+            <input type="number" id="max_mute_minutes" class="form-input" placeholder="1440 (24 часа)">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Количество варнов до авто-бана</label>
+            <input type="number" id="auto_ban_warn_count" class="form-input" placeholder="3">
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Срок авто-бана при 3/3 варнах (в днях)</label>
+            <input type="number" id="auto_ban_days" class="form-input" placeholder="30">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Лимит подачи жалоб в час на пользователя</label>
+            <input type="number" id="report_limit_per_hour" class="form-input" placeholder="5">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔐 Доступ к веб-панели</span>
+          </div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+            Администраторы сервера имеют доступ автоматически. Укажите ID дополнительных ролей (модераторы, кураторы), которым разрешён вход в веб-панель.
+          </p>
+          <div class="form-group">
+            <label class="form-label">ID ролей с доступом к панели (через запятую)</label>
+            <textarea id="panel_access_roles" class="form-input" rows="4" placeholder="123456789012345678, 234567890123456789"></textarea>
+          </div>
+          <div style="margin-top:12px">
+            <button class="btn btn-secondary btn-sm" onclick="savePanelAccess()">Сохранить права панели</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;text-align:right">
+        <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить настройки</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/utils.js"></script>
+<script>
+const settingsFields = [
+  'role_access_id', 'role_noaccess_id', 'role_male_id', 'role_female_id',
+  'role_ban_id', 'role_mute_voice_id', 'role_mute_text_id', 'role_warn1_id', 'role_warn2_id', 'role_warning_id',
+  'channel_ban_room_id', 'channel_reports_id', 'category_reports_id',
+  'channel_log_reports_id', 'channel_log_punish_id', 'channel_log_verify_id', 'channel_log_panel_id',
+  'max_mute_minutes', 'auto_ban_warn_count', 'auto_ban_days', 'report_limit_per_hour'
+];
+
+async function loadSettings() {
+  try {
+    const s = await api.get('/settings');
+    settingsFields.forEach(f => {
+      const el = document.getElementById(f);
+      if (el && s[f] !== null && s[f] !== undefined) {
+        el.value = s[f];
+      }
+    });
+
+    const roles = await api.get('/panel-access');
+    document.getElementById('panel_access_roles').value = roles.join(', ');
+  } catch(err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function saveSettings() {
+  const payload = {};
+  settingsFields.forEach(f => {
+    const el = document.getElementById(f);
+    if (el) {
+      const val = el.value.trim();
+      payload[f] = val ? parseInt(val) : null;
+    }
+  });
+
+  try {
+    const res = await api.patch('/settings', payload);
+    showToast(res.message || 'Настройки сохранены', 'success');
+  } catch(err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function savePanelAccess() {
+  const raw = document.getElementById('panel_access_roles').value;
+  const roleIds = raw.split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && !isNaN(s))
+    .map(s => parseInt(s));
+
+  try {
+    await api.put('/panel-access', { role_ids: roleIds });
+    showToast('Права доступа к панели обновлены', 'success');
+  } catch(err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function syncBanPerms() {
+  try {
+    const res = await api.post('/sync-ban-permissions', {});
+    showToast(res.message || 'Сигнал отправлен боту', 'info');
+  } catch(err) {
+    showToast(err.message, 'error');
+  }
+}
+
+loadSettings();
+</script>
+</body>
+</html>
