@@ -35,9 +35,14 @@ if not raw_url:
         local_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data"))
         os.makedirs(local_dir, exist_ok=True)
         db_file = os.path.join(local_dir, "shared.db")
-    DATABASE_URL = f"sqlite+aiosqlite:///{db_file.replace(os.sep, '/')}"
 else:
-    DATABASE_URL = raw_url
+    # Если передали postgresql:// или postgres://, конвертируем в asyncpg
+    if raw_url.startswith("postgresql://"):
+        DATABASE_URL = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif raw_url.startswith("postgres://"):
+        DATABASE_URL = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    else:
+        DATABASE_URL = raw_url
 
 is_sqlite = "sqlite" in DATABASE_URL
 
