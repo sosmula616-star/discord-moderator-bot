@@ -78,13 +78,15 @@ async def main():
     if not database_url:
         raise RuntimeError("DATABASE_URL не задан в .env")
 
-    # Запускаем LISTEN/NOTIFY для синхронизации конфига
-    pg_dsn = database_url.replace("postgresql+asyncpg://", "postgresql://")
+    # Инициализируем таблицы базы данных
+    await init_db()
 
     bot = ModerationBot()
     async with bot:
-        # Запускаем NOTIFY listener параллельно
-        asyncio.ensure_future(config_cache.start_listener(pg_dsn))
+        # Для PostgreSQL запускаем NOTIFY listener параллельно
+        if "postgresql" in database_url:
+            pg_dsn = database_url.replace("postgresql+asyncpg://", "postgresql://")
+            asyncio.ensure_future(config_cache.start_listener(pg_dsn))
         await bot.start(token)
 
 

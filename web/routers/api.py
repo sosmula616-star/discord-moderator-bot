@@ -33,19 +33,23 @@ GUILD_ID = int(os.environ.get("GUILD_ID", 0))
 # ─────────────────────────── Notify helper ───────────────────────────
 
 async def notify_bot(guild_id: int) -> None:
-    """Отправляет NOTIFY PostgreSQL, чтобы бот перечитал конфиг."""
-    dsn = os.environ["DATABASE_URL"].replace("postgresql+asyncpg://", "postgresql://")
-    try:
-        conn = await asyncpg.connect(dsn=dsn)
-        await conn.execute(
-            "SELECT pg_notify($1, $2)",
-            "config_update",
-            json.dumps({"guild_id": guild_id}),
-        )
-        await conn.close()
-    except Exception as e:
-        # Не критично: бот перечитает при следующем обращении
-        pass
+    """Отправляет сигнал обновления настроек боту (SQLite / PostgreSQL)."""
+    from bot.config_cache import config_cache
+    await config_cache.invalidate(guild_id)
+
+    db_url = os.environ.get("DATABASE_URL", "")
+    if "postgresql" in db_url:
+        dsn = db_url.replace("postgresql+asyncpg://", "postgresql://")
+        try:
+            conn = await asyncpg.connect(dsn=dsn)
+            await conn.execute(
+                "SELECT pg_notify($1, $2)",
+                "config_update",
+                json.dumps({"guild_id": guild_id}),
+            )
+            await conn.close()
+        except Exception:
+            pass
 
 
 async def log_panel_action(

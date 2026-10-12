@@ -19,12 +19,9 @@ from web.routers import auth, api, panel
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: инициализация БД
-    from bot.database import engine
-    from bot.models import Base
-    async with engine.begin() as conn:
-        # Таблицы создаёт Alembic; здесь просто проверяем соединение
-        pass
+    # Startup: инициализация БД (создаёт таблицы если не существуют)
+    from bot.database import engine, init_db
+    await init_db()
     yield
     await engine.dispose()
 
